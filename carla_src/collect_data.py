@@ -7,6 +7,7 @@ import time
 
 from carla_utils import add_npc_vehicles
 from pygame_utils import ControlObject, RenderObject, pygame_callback
+from sensor_utils import initialize_camera, initialize_lidar
 
 
 if __name__=="__main__":
@@ -32,18 +33,15 @@ if __name__=="__main__":
     spectator = world.get_spectator()
 
     vehicles = add_npc_vehicles(world, traffic_manager, max_vehicles=75)
+    print(f"[INFO] Retrieved {len(vehicles)} vehicles from the blueprint")
 
     # Randomly select a vehicle to follow with the camera
     ego_vehicle = random.choice(vehicles)
     ego_vehicle.set_autopilot(False)
 
-    # Initialise the camera floating behind the vehicle
-    camera_init_trans = carla.Transform(carla.Location(x=-5, z=3), carla.Rotation(pitch=-20))
-    camera_bp = world.get_blueprint_library().find('sensor.camera.rgb')
-    camera_bp.set_attribute('image_size_x', '1920')
-    camera_bp.set_attribute('image_size_y', '1080')
-    camera_bp.set_attribute('fov', '110')
-    camera = world.spawn_actor(camera_bp, camera_init_trans, attach_to=ego_vehicle)
+    # Initialize Sensors:
+    camera, camera_bp = initialize_camera(world, ego_vehicle)
+    lidar_sen = initialize_lidar(world,ego_vehicle)
 
     # Start camera with PyGame callback
     camera.listen(lambda image: pygame_callback(image, renderObject))
@@ -77,38 +75,15 @@ if __name__=="__main__":
         controlObject.process_control()
         # Collect key press events
         for event in pygame.event.get():
-            print(event)
             # If the window is closed, break the while loop
             if event.type == pygame.QUIT:
                 crashed = True
 
             # Parse effect of key press event on control state
             controlObject.parse_control(event)
-            if event.type == pygame.KEYUP:
-                # TAB key switches vehicle
-                if event.key == pygame.K_TAB:
-                    ego_vehicle.set_autopilot(True)
-                    ego_vehicle = random.choice(vehicles)
-                    ego_vehicle.set_autopilot(False)
-
-                    # Ensure vehicle is still alive (might have been destroyed)
-                    if ego_vehicle.is_alive:
-                        # Stop and remove the camera
-                        camera.stop()
-                        camera.destroy()
-
-                        # Spawn new camera and attach to new vehicle
-                        controlObject = ControlObject(ego_vehicle)
-                        camera = world.spawn_actor(camera_bp, camera_init_trans, attach_to=ego_vehicle)
-                        camera.listen(lambda image: pygame_callback(image, renderObject))
-
-                        # Update PyGame window
-                        gameDisplay.fill((0,0,0))               
-                        gameDisplay.blit(renderObject.surface, (0,0))
-                        pygame.display.flip()
 
     # Stop camera and quit PyGame after exiting game loop
     camera.stop()
+    lidar_sen.stop()
     pygame.quit()
-
 

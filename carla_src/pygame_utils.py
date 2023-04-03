@@ -1,6 +1,8 @@
 import pygame
 import carla
 
+import numpy as np
+
 # Control object to manage vehicle controls
 class ControlObject(object):
     def __init__(self, veh):
