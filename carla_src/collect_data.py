@@ -6,24 +6,25 @@ import open3d as o3d
 import time
 
 from carla_utils import add_npc_vehicles
-from pygame_utils import ControlObject, RenderObject, pygame_callback
+from pygame_utils import ControlObject
 from sensor_utils import initialize_camera, initialize_lidar
 
-
-if __name__=="__main__":
+def initialize_simulation(synchronous=True, num_vehicles=75):
     # Connect to the client and retrieve the world object
     client = carla.Client('localhost', 2000)
     world = client.get_world()
 
     # Set up the simulator in synchronous mode
-    settings = world.get_settings()
-    settings.synchronous_mode = True # Enables synchronous mode
-    settings.fixed_delta_seconds = 0.05
-    world.apply_settings(settings)
+    if synchronous:
+        settings = world.get_settings()
+        settings.synchronous_mode = True # Enables synchronous mode
+        settings.fixed_delta_seconds = 0.05
+        world.apply_settings(settings)
 
     # Set up the TM in synchronous mode
     traffic_manager = client.get_trafficmanager()
-    traffic_manager.set_synchronous_mode(True)
+    if synchronous:
+        traffic_manager.set_synchronous_mode(True)
 
     # Set a seed so behaviour can be repeated if necessary
     traffic_manager.set_random_device_seed(0)
@@ -31,28 +32,28 @@ if __name__=="__main__":
 
     # We will aslo set up the spectator so we can see what we do
     spectator = world.get_spectator()
-
-    vehicles = add_npc_vehicles(world, traffic_manager, max_vehicles=75)
+    vehicles = add_npc_vehicles(world, traffic_manager, max_vehicles=num_vehicles)
     print(f"[INFO] Retrieved {len(vehicles)} vehicles from the blueprint")
+
+    return client, world, traffic_manager, spectator, vehicles
+
+
+
+if __name__=="__main__":
+    # Initialize the simulation
+    client, world, traffic_manager, spectator, vehicles = initialize_simulation(synchronous=True, num_vehicles=75)
 
     # Randomly select a vehicle to follow with the camera
     ego_vehicle = random.choice(vehicles)
     ego_vehicle.set_autopilot(False)
 
+    # Control this vehicle using Control Object from pygame_utils
+    controlObject = ControlObject(ego_vehicle)
+
     # Initialize Sensors:
-    camera, camera_bp = initialize_camera(world, ego_vehicle)
+    camera, renderObject, image_h, image_w = initialize_camera(world, ego_vehicle)
     lidar_sen = initialize_lidar(world,ego_vehicle)
 
-    # Start camera with PyGame callback
-    camera.listen(lambda image: pygame_callback(image, renderObject))
-
-    # Get camera dimensions
-    image_w = camera_bp.get_attribute("image_size_x").as_int()
-    image_h = camera_bp.get_attribute("image_size_y").as_int()
-
-    # Instantiate objects for rendering and vehicle control
-    renderObject = RenderObject(image_w, image_h)
-    controlObject = ControlObject(ego_vehicle)
 
     # Initialise the display
     pygame.init()
@@ -84,6 +85,6 @@ if __name__=="__main__":
 
     # Stop camera and quit PyGame after exiting game loop
     camera.stop()
-    lidar_sen.stop()
+    # lidar_sen.stop()
     pygame.quit()
 
