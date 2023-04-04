@@ -21,17 +21,18 @@ def initialize_camera(world, ego_vehicle):
     # Instantiate objects for rendering and vehicle control
     renderObject = RenderObject(image_w, image_h)
     # Start camera with PyGame callback
-    camera.listen(lambda image: pygame_callback(image, renderObject))
+    camera.listen(lambda image: pygame_callback(image, renderObject, world.get_snapshot().frame))
     return camera, renderObject, image_h, image_w
 
 def initialize_lidar(world, ego_vehicle):
     lidar_bp = world.get_blueprint_library().find('sensor.lidar.ray_cast')
-    lidar_bp.set_attribute('channels',str(32))
-    lidar_bp.set_attribute('points_per_second',str(90000))
+    lidar_bp.set_attribute('channels',str(64))
+    lidar_bp.set_attribute('points_per_second',str(200000))
     lidar_bp.set_attribute('range',str(20))
+    lidar_bp.set_attribute('rotation_frequency', str(30))
     lidar_location = carla.Location(0,0,2)
     lidar_rotation = carla.Rotation(0,0,0)
     lidar_transform = carla.Transform(lidar_location,lidar_rotation)
     lidar_sen = world.spawn_actor(lidar_bp,lidar_transform,attach_to=ego_vehicle)
-    lidar_sen.listen(lambda point_cloud: point_cloud.save_to_disk('/home/carla/PythonAPI/workspace/DL-SLAM/data/lidar/%.6d.pcd' % point_cloud.frame))
+    lidar_sen.listen(lambda point_cloud: point_cloud.save_to_disk('/home/carla/PythonAPI/workspace/DL-SLAM/data/lidar/%.6d.ply' % point_cloud.frame))
     return lidar_sen

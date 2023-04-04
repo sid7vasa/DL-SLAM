@@ -1,5 +1,6 @@
 import pygame
 import carla
+from PIL import Image
 
 import numpy as np
 
@@ -49,7 +50,7 @@ class ControlObject(object):
     def process_control(self):
 
         if self._throttle: 
-            self._control.throttle = min(self._control.throttle + 0.01, 1)
+            self._control.throttle = min(self._control.throttle + 0.01, 0.5)
             self._control.gear = 1
             self._control.brake = False
         elif not self._brake:
@@ -97,8 +98,11 @@ class RenderObject(object):
         self.surface = pygame.surfarray.make_surface(init_image.swapaxes(0,1))
 
 # Camera sensor callback, reshapes raw data from camera into 2D RGB and applies to PyGame surface
-def pygame_callback(data, obj):
+def pygame_callback(data, obj, frame):
     img = np.reshape(np.copy(data.raw_data), (data.height, data.width, 4))
     img = img[:,:,:3]
     img = img[:, :, ::-1]
+    # pil_image = Image.fromarray(img)
+    # pil_image.save(f'/home/carla/PythonAPI/workspace/DL-SLAM/data/camera/{frame}_image.png')
+
     obj.surface = pygame.surfarray.make_surface(img.swapaxes(0,1))

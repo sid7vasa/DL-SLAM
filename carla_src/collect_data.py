@@ -4,6 +4,7 @@ import pygame
 import numpy as np
 import open3d as o3d
 import time
+import yaml
 
 from carla_utils import add_npc_vehicles
 from pygame_utils import ControlObject
@@ -33,15 +34,25 @@ def initialize_simulation(synchronous=True, num_vehicles=75):
     # We will aslo set up the spectator so we can see what we do
     spectator = world.get_spectator()
     vehicles = add_npc_vehicles(world, traffic_manager, max_vehicles=num_vehicles)
+    print("[INFO] Initialized Simulation:")
     print(f"[INFO] Retrieved {len(vehicles)} vehicles from the blueprint")
 
     return client, world, traffic_manager, spectator, vehicles
 
-
+def create_data_collection_directories():
+    # TODO create the data collection directors based on sensors selected and the timestamp
+    pass
 
 if __name__=="__main__":
+    # Load configuration parameters
+    with open('./carla_src/sensor_configurations.yaml', 'r') as file:
+        config_dict = yaml.safe_load(file)
+
+    synchronous = config_dict['simulation']['synchronous']
+    num_vehicles = config_dict['simulation']['npc_number']
+
     # Initialize the simulation
-    client, world, traffic_manager, spectator, vehicles = initialize_simulation(synchronous=True, num_vehicles=75)
+    client, world, traffic_manager, spectator, vehicles = initialize_simulation(synchronous, num_vehicles)
 
     # Randomly select a vehicle to follow with the camera
     ego_vehicle = random.choice(vehicles)
@@ -67,24 +78,29 @@ if __name__=="__main__":
     crashed = False
 
     while not crashed:
+
         # Advance the simulation time
         world.tick()
+        world_snapshot = world.get_snapshot()
+        w_frame = world_snapshot.frame
+        print("\nWorld's frame: %d" % w_frame)
+
         # Update the display
         gameDisplay.blit(renderObject.surface, (0,0))
         pygame.display.flip()
-        # Process the current control state
+
+        # Executes the control input by the user, such as throttle, steer or brake. 
         controlObject.process_control()
+
         # Collect key press events
         for event in pygame.event.get():
             # If the window is closed, break the while loop
             if event.type == pygame.QUIT:
                 crashed = True
-
             # Parse effect of key press event on control state
             controlObject.parse_control(event)
-
-    # Stop camera and quit PyGame after exiting game loop
+        
     camera.stop()
-    # lidar_sen.stop()
+    lidar_sen.stop()
     pygame.quit()
 

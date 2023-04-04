@@ -1,4 +1,12 @@
-CAMERA:
-  Attributes: 1
-LIDAR:
-  Attributes: 2
+simulation:
+  npc_number : 75
+  synchronous: true
+
+sensors:
+  camera:
+    attributes: 1
+  lidar:
+    attributes: 2
+
+data_collection:
+  path: /home/carla/PythonAPI/workspace/DL-SLAM/data/
