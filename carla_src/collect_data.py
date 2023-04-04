@@ -5,6 +5,8 @@ import numpy as np
 import open3d as o3d
 import time
 import yaml
+import os
+import datetime
 
 from carla_utils import add_npc_vehicles
 from pygame_utils import ControlObject
@@ -39,9 +41,18 @@ def initialize_simulation(synchronous=True, num_vehicles=75):
 
     return client, world, traffic_manager, spectator, vehicles
 
-def create_data_collection_directories():
-    # TODO create the data collection directors based on sensors selected and the timestamp
-    pass
+def create_data_collection_directories(config_dict):
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    path = config_dict['data_collection']['path'] + "DATA_" + timestamp + "/"
+    config_dict['data_collection']['path'] = path
+
+    if not os.path.exists(path+"lidar"):
+        os.makedirs(path+"lidar")
+
+    if not os.path.exists(path+"camera"):
+        os.makedirs(path+"camera")
+
+    return config_dict
 
 if __name__=="__main__":
     # Load configuration parameters
@@ -50,6 +61,9 @@ if __name__=="__main__":
 
     synchronous = config_dict['simulation']['synchronous']
     num_vehicles = config_dict['simulation']['npc_number']
+
+    # Create directories
+    config_dict = create_data_collection_directories(config_dict)
 
     # Initialize the simulation
     client, world, traffic_manager, spectator, vehicles = initialize_simulation(synchronous, num_vehicles)
@@ -62,8 +76,8 @@ if __name__=="__main__":
     controlObject = ControlObject(ego_vehicle)
 
     # Initialize Sensors:
-    camera, renderObject, image_h, image_w = initialize_camera(world, ego_vehicle)
-    lidar_sen = initialize_lidar(world,ego_vehicle)
+    camera, renderObject, image_h, image_w = initialize_camera(config_dict, world, ego_vehicle)
+    lidar_sen = initialize_lidar(config_dict, world, ego_vehicle)
 
 
     # Initialise the display

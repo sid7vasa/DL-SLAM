@@ -98,10 +98,11 @@ class RenderObject(object):
         self.surface = pygame.surfarray.make_surface(init_image.swapaxes(0,1))
 
 # Camera sensor callback, reshapes raw data from camera into 2D RGB and applies to PyGame surface
-def pygame_callback(data, obj, frame):
+def pygame_callback(config_dict, data, obj, frame):
     img = np.reshape(np.copy(data.raw_data), (data.height, data.width, 4))
     img = img[:,:,:3]
     img = img[:, :, ::-1]
+    # TODO: Very slow operation, works for now but needs to be fixed (low priority)
     # pil_image = Image.fromarray(img)
     # pil_image.save(f'/home/carla/PythonAPI/workspace/DL-SLAM/data/camera/{frame}_image.png')
 
