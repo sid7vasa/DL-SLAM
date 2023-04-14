@@ -1,0 +1,14 @@
+simulation:
+  npc_number : 75
+  synchronous: true
+
+# TODO: to change sensor attributes from here (low priority)
+sensors:
+  camera:
+    attributes: 1
+  lidar:
+    attributes: 2
+
+# TODO: Relative paths or environment variables should be introduced (med priority)
+data_collection:
+  path: /home/carla/PythonAPI/workspace/DL-SLAM/data/
