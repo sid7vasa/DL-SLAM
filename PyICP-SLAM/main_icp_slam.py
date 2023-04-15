@@ -18,7 +18,9 @@ from utils.UtilsMisc import *
 import utils.UtilsPointcloud as Ptutils
 import utils.ICP as ICP
 import open3d as o3d
-from dcp.dcp import DCP
+from dcp import DCP
+
+import torch
 
 # params
 parser = argparse.ArgumentParser(description='PyICP SLAM arguments')
@@ -34,7 +36,7 @@ parser.add_argument('--loop_threshold', type=float, default=0.11) # 0.11 is usua
 
 parser.add_argument('--data_base_dir', type=str, 
                     default='/your/path/.../data_odometry_velodyne/dataset/sequences')
-parser.add_argument('--sequence_idx', type=str, default='00')
+parser.add_argument('--sequence_idx', type=str, default='01')
 
 parser.add_argument('--save_gap', type=int, default=300)
 
@@ -66,7 +68,7 @@ SCM = ScanContextManager(shape=[args.num_rings, args.num_sectors],
                                         num_candidates=args.num_candidates, 
                                         threshold=args.loop_threshold)
 
-dcp = DCP("./dcp/full_modelv1.pt",num_down_sample_points=1024)
+dcp = DCP("/home/sid/workspace/rss/dcp/pretrained/full_modelv1.pt",num_down_sample_points=1024)
 print("Loaded Deep Closest Point")
 
 # for save the results as a video
@@ -113,8 +115,19 @@ with writer.saving(fig, video_name, num_frames_to_save): # this video saving par
                                                                 )
             odom_transform = reg_p2p.transformation 
         else:   # calc odometry using open3d
-            odom_transform, _, _ = ICP.icp(curr_scan_down_pts, prev_scan_down_pts, init_pose=icp_initial, max_iterations=20)
-            print("odom transform shape:", odom_transform)
+            # odom_transform, _, _ = ICP.icp(curr_scan_down_pts, prev_scan_down_pts, init_pose=icp_initial, max_iterations=20)
+            source = o3d.geometry.PointCloud()
+            source.points = o3d.utility.Vector3dVector(curr_scan_down_pts)
+
+            target = o3d.geometry.PointCloud()
+            target.points = o3d.utility.Vector3dVector(prev_scan_down_pts)
+            rotation1, translation1, rotation2, translation2 = dcp.infer(source, target)
+            homogeneous = torch.zeros((4, 4))
+            homogeneous[:3, :3] = rotation1
+            homogeneous[:3, 3] = translation1.squeeze()
+            homogeneous[3,3] = 1
+            odom_transform = homogeneous.detach().numpy()
+            print("odom transform shape:", odom_transform.shape)
 
         # update the current (moved) pose 
         PGM.curr_se3 = np.matmul(PGM.curr_se3, odom_transform)
