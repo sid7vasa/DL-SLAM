@@ -18,6 +18,7 @@ from utils.UtilsMisc import *
 import utils.UtilsPointcloud as Ptutils
 import utils.ICP as ICP
 import open3d as o3d
+from dcp.dcp import DCP
 
 # params
 parser = argparse.ArgumentParser(description='PyICP SLAM arguments')
@@ -65,6 +66,9 @@ SCM = ScanContextManager(shape=[args.num_rings, args.num_sectors],
                                         num_candidates=args.num_candidates, 
                                         threshold=args.loop_threshold)
 
+dcp = DCP("./dcp/full_modelv1.pt",num_down_sample_points=1024)
+print("Loaded Deep Closest Point")
+
 # for save the results as a video
 fig_idx = 1
 fig = plt.figure(fig_idx)
@@ -110,6 +114,7 @@ with writer.saving(fig, video_name, num_frames_to_save): # this video saving par
             odom_transform = reg_p2p.transformation 
         else:   # calc odometry using open3d
             odom_transform, _, _ = ICP.icp(curr_scan_down_pts, prev_scan_down_pts, init_pose=icp_initial, max_iterations=20)
+            print("odom transform shape:", odom_transform)
 
         # update the current (moved) pose 
         PGM.curr_se3 = np.matmul(PGM.curr_se3, odom_transform)
