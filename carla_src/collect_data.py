@@ -52,6 +52,9 @@ def create_data_collection_directories(config_dict):
     if not os.path.exists(path+"camera"):
         os.makedirs(path+"camera")
 
+    if not os.path.exists(path+"gps"):
+        os.makedirs(path+"gps")
+
     return config_dict
 
 if __name__=="__main__":
@@ -113,7 +116,8 @@ if __name__=="__main__":
                 crashed = True
             # Parse effect of key press event on control state
             controlObject.parse_control(event)
-        
+
+    # TODO: Before stopping here, we might have to save the sensor buffer to make sure the last scans are saved properly
     camera.stop()
     lidar_sen.stop()
     pygame.quit()
