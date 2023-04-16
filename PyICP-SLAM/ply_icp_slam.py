@@ -5,6 +5,7 @@ import copy
 import time
 import random
 import argparse
+import re
 
 import numpy as np
 np.set_printoptions(precision=4)
@@ -19,10 +20,29 @@ import utils.UtilsPointcloud as Ptutils
 import utils.ICP as ICP
 import open3d as o3d
 
+def load_ply_file(path):
+    """
+    Load a point cloud from a PLY file and return as a NumPy array.
+    
+    Args:
+        path (str): Path to the PLY file.
+    
+    Returns:
+        numpy.ndarray: A NumPy array of shape (N, 3) containing the XYZ coordinates of the point cloud.
+    """
+    # Load the point cloud data from the PLY file using the open3d library
+    pcd = o3d.io.read_point_cloud(path)
+
+    # Convert the point cloud data to a NumPy array
+    points = np.asarray(pcd.points)
+
+    return points
+
 # params
 parser = argparse.ArgumentParser(description='PyICP SLAM arguments')
 
-parser.add_argument('--num_icp_points', type=int, default=5000) # 5000 is enough for real time
+
+parser.add_argument('--num_icp_points', type=int, default=3000) # 5000 is enough for real time
 
 parser.add_argument('--num_rings', type=int, default=20) # same as the original paper
 parser.add_argument('--num_sectors', type=int, default=60) # same as the original paper
@@ -30,21 +50,21 @@ parser.add_argument('--num_candidates', type=int, default=10) # must be int
 parser.add_argument('--try_gap_loop_detection', type=int, default=10) # same as the original paper
 
 parser.add_argument('--loop_threshold', type=float, default=0.11) # 0.11 is usually safe (for avoiding false loop closure)
-
-parser.add_argument('--data_base_dir', type=str, 
-                    default='/your/path/.../data_odometry_velodyne/dataset/sequences')
 parser.add_argument('--sequence_idx', type=str, default='00')
+parser.add_argument('--data_base_dir', type=str, 
+                    default='/home/sid/scans/DATA_2023-04-16_19-29-42/lidar')
 
 parser.add_argument('--save_gap', type=int, default=300)
 
-parser.add_argument('--use_open3d', action='store_true')
+parser.add_argument('--use_open3d', action='store_false', default=True)
 
 args = parser.parse_args()
 
 # dataset 
-sequence_dir = os.path.join(args.data_base_dir, args.sequence_idx, 'velodyne')
-sequence_manager = Ptutils.KittiScanDirManager(sequence_dir)
-scan_paths = sequence_manager.scan_fullpaths
+folder_path = args.data_base_dir
+scan_paths = [os.path.join(folder_path, filename) for filename in os.listdir(folder_path)]
+pattern = re.compile(r'\d+')
+scan_paths = sorted(scan_paths, key=lambda path: int(pattern.findall(path)[-1]))
 num_frames = len(scan_paths)
 
 # Pose Graph Manager (for back-end optimization) initialization
@@ -65,6 +85,22 @@ SCM = ScanContextManager(shape=[args.num_rings, args.num_sectors],
                                         num_candidates=args.num_candidates, 
                                         threshold=args.loop_threshold)
 
+import open3d as o3d
+
+import open3d as o3d
+
+def downsample_point_clouds(source, target, num_points=5000):
+    # Downsample the source and target point clouds using uniform downsampling
+    source_down = source.uniform_down_sample(num_points)
+    target_down = target.uniform_down_sample(num_points)
+
+    # Estimate the normals for each downsampled point cloud
+    source_down.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+    target_down.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+
+    return source_down, target_down
+
+
 # for save the results as a video
 fig_idx = 1
 fig = plt.figure(fig_idx)
@@ -78,8 +114,9 @@ with writer.saving(fig, video_name, num_frames_to_save): # this video saving par
     for for_idx, scan_path in tqdm(enumerate(scan_paths), total=num_frames, mininterval=5.0):
 
         # get current information     
-        curr_scan_pts = Ptutils.readScan(scan_path) 
+        curr_scan_pts = load_ply_file(scan_path)
         curr_scan_down_pts = Ptutils.random_sampling(curr_scan_pts, num_points=args.num_icp_points)
+
 
         # save current node
         PGM.curr_node_idx = for_idx # make start with 0
@@ -100,12 +137,21 @@ with writer.saving(fig, video_name, num_frames_to_save): # this video saving par
             target = o3d.geometry.PointCloud()
             target.points = o3d.utility.Vector3dVector(prev_scan_down_pts)
 
+            # Sort the points in the PointCloud objects by creating a KDTree and querying the points
+            source_tree = o3d.geometry.KDTreeFlann(source)
+            source_sorted_indices = source_tree.search_knn_vector_3d(source.points[0], len(source.points))[1]
+            source.points = o3d.utility.Vector3dVector(np.asarray(source.points)[source_sorted_indices])
+
+            target_tree = o3d.geometry.KDTreeFlann(target)
+            target_sorted_indices = target_tree.search_knn_vector_3d(target.points[0], len(target.points))[1]
+            target.points = o3d.utility.Vector3dVector(np.asarray(target.points)[target_sorted_indices])
+
             reg_p2p = o3d.pipelines.registration.registration_icp(
                                                                 source = source, 
                                                                 target = target, 
-                                                                max_correspondence_distance = 10, 
+                                                                max_correspondence_distance = 15, 
                                                                 init = icp_initial, 
-                                                                estimation_method = o3d.pipelines.registration.TransformationEstimationPointToPoint(), criteria = o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=20)
+                                                                estimation_method = o3d.pipelines.registration.TransformationEstimationPointToPoint(), criteria = o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=30)
                                                                 )
             odom_transform = reg_p2p.transformation 
         else:   # calc odometry using open3d
@@ -122,24 +168,24 @@ with writer.saving(fig, video_name, num_frames_to_save): # this video saving par
         PGM.prev_node_idx = PGM.curr_node_idx
         prev_scan_pts = copy.deepcopy(curr_scan_pts)
 
-        # loop detection and optimize the graph 
-        if(PGM.curr_node_idx > 1 and PGM.curr_node_idx % args.try_gap_loop_detection == 0): 
-            # 1/ loop detection 
-            loop_idx, loop_dist, yaw_diff_deg = SCM.detectLoop()
-            if(loop_idx == None): # NOT FOUND
-                pass
-            else:
-                print("Loop event detected: ", PGM.curr_node_idx, loop_idx, loop_dist)
-                # 2-1/ add the loop factor 
-                loop_scan_down_pts = SCM.getPtcloud(loop_idx)
-                loop_transform, _, _ = ICP.icp(curr_scan_down_pts, loop_scan_down_pts, init_pose=yawdeg2se3(yaw_diff_deg), max_iterations=20)
-                PGM.addLoopFactor(loop_transform, loop_idx)
+        # # loop detection and optimize the graph 
+        # if(PGM.curr_node_idx > 1 and PGM.curr_node_idx % args.try_gap_loop_detection == 0): 
+        #     # 1/ loop detection 
+        #     loop_idx, loop_dist, yaw_diff_deg = SCM.detectLoop()
+        #     if(loop_idx == None): # NOT FOUND
+        #         pass
+        #     else:
+        #         print("Loop event detected: ", PGM.curr_node_idx, loop_idx, loop_dist)
+        #         # 2-1/ add the loop factor 
+        #         loop_scan_down_pts = SCM.getPtcloud(loop_idx)
+        #         loop_transform, _, _ = ICP.icp(curr_scan_down_pts, loop_scan_down_pts, init_pose=yawdeg2se3(yaw_diff_deg), max_iterations=20)
+        #         PGM.addLoopFactor(loop_transform, loop_idx)
 
-                # 2-2/ graph optimization 
-                PGM.optimizePoseGraph()
+        #         # 2-2/ graph optimization 
+        #         PGM.optimizePoseGraph()
 
-                # 2-2/ save optimized poses
-                ResultSaver.saveOptimizedPoseGraphResult(PGM.curr_node_idx, PGM.graph_optimized)
+        #         # 2-2/ save optimized poses
+        #         ResultSaver.saveOptimizedPoseGraphResult(PGM.curr_node_idx, PGM.graph_optimized)
 
         # save the ICP odometry pose result (no loop closure)
         ResultSaver.saveUnoptimizedPoseGraphResult(PGM.curr_se3, PGM.curr_node_idx) 
