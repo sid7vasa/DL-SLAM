@@ -27,8 +27,8 @@ def initialize_camera(config_dict, world, ego_vehicle):
 def initialize_lidar(config_dict, world, ego_vehicle):
     lidar_bp = world.get_blueprint_library().find('sensor.lidar.ray_cast')
     lidar_bp.set_attribute('channels',str(64))
-    lidar_bp.set_attribute('points_per_second',str(200000))
-    lidar_bp.set_attribute('range',str(20))
+    lidar_bp.set_attribute('points_per_second',str(4500000))
+    lidar_bp.set_attribute('range',str(120))
     lidar_bp.set_attribute('rotation_frequency', str(30))
     lidar_location = carla.Location(0,0,2)
     lidar_rotation = carla.Rotation(0,0,0)

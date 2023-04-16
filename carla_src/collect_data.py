@@ -29,9 +29,9 @@ def initialize_simulation(synchronous=True, num_vehicles=75):
     if synchronous:
         traffic_manager.set_synchronous_mode(True)
 
-    # Set a seed so behaviour can be repeated if necessary
-    traffic_manager.set_random_device_seed(0)
-    random.seed(0)
+    # # Set a seed so behaviour can be repeated if necessary
+    # traffic_manager.set_random_device_seed(0)
+    # random.seed(0)
 
     # We will aslo set up the spectator so we can see what we do
     spectator = world.get_spectator()
