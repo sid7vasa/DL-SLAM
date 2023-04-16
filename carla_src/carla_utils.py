@@ -1,7 +1,7 @@
 import random
 
 def add_npc_vehicles(world, traffic_manager, max_vehicles=50, seed=0):
-    random.seed(seed)
+    # random.seed(seed)
 
     # Retrieve the map's spawn points
     spawn_points = world.get_map().get_spawn_points()
