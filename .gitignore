@@ -10,6 +10,12 @@ __pycache__/
 *.mp4
 *.avi
 
+# No ply files 
+*.ply
+
+# no results
+result
+
 # Distribution / packaging
 .Python
 build/

@@ -3,6 +3,7 @@ import numpy as np
 import open3d as o3d
 import pandas as pd
 import os
+import re
 
 # Example command to run this file:
 # python3 map_visualizer.py /home/sid/lidar_kitti/00 /home/sid/workspace/rss/DL-SLAM/PyICP-SLAM/result/00/pose00optimized_1681608043.csv map_00.ply
@@ -29,9 +30,10 @@ for i in range(len(df)):
 
 # Load the point cloud scans and apply the transformation matrices
 pcd_list = []
+scan_paths = [os.path.join(args.input_dir, filename) for filename in os.listdir(args.input_dir)]
+scan_paths = sorted(scan_paths, key=lambda path: int(path.split("/")[-1][:3]))
 for i in range(len(T_list)):
-    scan_path = os.path.join(args.input_dir, f'{i:06d}.ply')
-    pcd = o3d.io.read_point_cloud(scan_path)
+    pcd = o3d.io.read_point_cloud(scan_paths[i])
     pcd.transform(T_list[i])
     pcd_down = pcd.random_down_sample(sampling_ratio=args.sampling_ratio)
     pcd_list.append(pcd_down)
