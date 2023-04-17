@@ -11,4 +11,4 @@ sensors:
 
 # TODO: Relative paths or environment variables should be introduced (med priority)
 data_collection:
-  path: /home/carla/PythonAPI/workspace/DL-SLAM/data/
+  path: /home/skanda/rss/DL-SLAM/carla_src/data/

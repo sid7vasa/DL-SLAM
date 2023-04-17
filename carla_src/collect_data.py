@@ -70,7 +70,7 @@ if __name__=="__main__":
 
     # Randomly select a vehicle to follow with the camera
     ego_vehicle = random.choice(vehicles)
-    ego_vehicle.set_autopilot(False)
+    ego_vehicle.set_autopilot(True)
 
     # Control this vehicle using Control Object from pygame_utils
     controlObject = ControlObject(ego_vehicle)

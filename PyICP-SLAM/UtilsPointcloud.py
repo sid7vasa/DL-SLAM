@@ -1,7 +1,6 @@
 import os 
 import random
 import numpy as np
-from plyfile import PlyData
 
 def random_sampling(orig_points, num_points):
     assert orig_points.shape[0] > num_points
@@ -22,15 +21,6 @@ def readKittiScan(bin_path):
     ptcloud_xyz = scan[:, :-1]
     return ptcloud_xyz
     
-# def readScan(ply_path, dataset='KITTI'):
-#     if(dataset == 'KITTI'):
-#         return readKittiScan(ply_path)
-
-# def readKittiScan(ply_path):
-#     with open(ply_path, 'rb') as f:
-#         plydata = PlyData.read(f)
-#         ptcloud_xyz = np.vstack([plydata['vertex']['x'], plydata['vertex']['y'], plydata['vertex']['z']]).T
-#     return ptcloud_xyz
 
 class KittiScanDirManager:
     def __init__(self, scan_dir):
@@ -52,4 +42,3 @@ class KittiScanDirManager:
         return self.scan_fullpaths
     def printScanFullPaths(self):
         return print("\n".join(self.scan_fullpaths))
-

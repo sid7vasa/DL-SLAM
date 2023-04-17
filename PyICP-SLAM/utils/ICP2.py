@@ -92,15 +92,17 @@ def nearest_neighbor(src, dst):
 
 #     return distances.ravel(), indices.ravel()
 
-def icp(A, B, init_pose=None, max_iterations=20, tolerance=0.001):
+
+def kiss_icp(A, B, init_pose=None, max_iterations=20, tolerance=0.001, delta=0.1):
     '''
-    The Iterative Closest Point method: finds best-fit transform that maps points A on to points B
+    The KISS-ICP algorithm: finds best-fit transform that maps points A on to points B
     Input:
         A: Nxm numpy array of source mD points
         B: Nxm numpy array of destination mD point
         init_pose: (m+1)x(m+1) homogeneous transformation
         max_iterations: exit algorithm after max_iterations
         tolerance: convergence criteria
+        delta: step size for calculating the Jacobian
     Output:
         T: final homogeneous transformation that maps A on to B
         distances: Euclidean distances (errors) of the nearest neighbor
@@ -113,10 +115,10 @@ def icp(A, B, init_pose=None, max_iterations=20, tolerance=0.001):
     m = A.shape[1]
 
     # make points homogeneous, copy them to maintain the originals
-    src = np.ones((m+1,A.shape[0]))
-    dst = np.ones((m+1,B.shape[0]))
-    src[:m,:] = np.copy(A.T)
-    dst[:m,:] = np.copy(B.T)
+    src = np.ones((m+1, A.shape[0]))
+    dst = np.ones((m+1, B.shape[0]))
+    src[:m, :] = np.copy(A.T)
+    dst[:m, :] = np.copy(B.T)
 
     # apply the initial pose estimation
     if init_pose is not None:
@@ -128,11 +130,26 @@ def icp(A, B, init_pose=None, max_iterations=20, tolerance=0.001):
         # find the nearest neighbors between the current source and destination points
         distances, indices = nearest_neighbor(src[:m,:].T, dst[:m,:].T)
 
-        # compute the transformation between the current source and nearest destination points
-        T,_,_ = best_fit_transform(src[:m,:].T, dst[:m,indices].T)
+        # calculate the weight matrix based on the distances
+        # W = np.diag(1.0 / distances)
+        W = np.diag(1.0 / (distances + 1e-8))
+        
+        # calculate the Jacobian matrix
+        J = np.zeros((m * len(distances), m + 1))
 
-        # update the current source
-        src = np.dot(T, src)
+        for k in range(len(distances)):
+            x = src[:m, k]
+            y = dst[:m, indices[k]]
+            J[m*k:m*(k+1), :m] = np.eye(m) - delta * (y - x).reshape((-1, 1)) @ (y - x).reshape((1, -1))
+            J[m*k:m*(k+1), m] = -(y - x)
+        print("shape of jacobian", J.shape)
+        print("Shape of weights", W.shape)
+
+        # calculate the update step
+        dT = np.linalg.lstsq(W @ J, W @ (dst - src))[0]
+
+        # apply the update step
+        src += (dT.reshape((-1, 1)) @ np.ones((1, src.shape[1]))).T
 
         # check error
         mean_error = np.mean(distances)
@@ -141,7 +158,7 @@ def icp(A, B, init_pose=None, max_iterations=20, tolerance=0.001):
         prev_error = mean_error
 
     # calculate final transformation
-    T,_,_ = best_fit_transform(A, src[:m,:].T)
+    T, _, _ = best_fit_transform(A, src[:m, :].T)
 
     return T, distances, i
 
