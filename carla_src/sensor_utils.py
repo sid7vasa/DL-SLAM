@@ -34,6 +34,35 @@ def initialize_lidar(config_dict, world, ego_vehicle):
     lidar_rotation = carla.Rotation(0,0,0)
     lidar_transform = carla.Transform(lidar_location,lidar_rotation)
     lidar_sen = world.spawn_actor(lidar_bp,lidar_transform,attach_to=ego_vehicle)
+    
     path = config_dict['data_collection']['path']
-    lidar_sen.listen(lambda point_cloud: point_cloud.save_to_disk(f'{path}lidar/{point_cloud.frame}.ply' ))
+    gps_data = []
+    lidar_data = []
+    transform_data = []
+
+    def process_lidar(point_cloud):
+        # Get the current GPS location and rotation of the vehicle
+        vehicle_transform = ego_vehicle.get_transform()
+        transform_data.append({
+            'location': {
+                'x': vehicle_transform.location.x,
+                'y': vehicle_transform.location.y,
+                'z': vehicle_transform.location.z
+            },
+            'rotation': {
+                'pitch': vehicle_transform.rotation.pitch,
+                'yaw': vehicle_transform.rotation.yaw,
+                'roll': vehicle_transform.rotation.roll
+            }
+        })
+
+        # Process the LIDAR data and add it to the buffer
+        lidar_data.append(point_cloud)
+
+        # Save the GPS, LIDAR, and transform data to disk
+        point_cloud.save_to_disk(f'{path}lidar/{point_cloud.frame}.ply')
+        np.save(f'{path}gps/{point_cloud.frame}.npy', transform_data[-1])
+
+    lidar_sen.listen(process_lidar)
+
     return lidar_sen
