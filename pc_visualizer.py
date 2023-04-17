@@ -97,7 +97,7 @@ def images_to_video(images, video_path, fps=25):
 
 if __name__=="__main__":
     # Set directory path
-    dir_path = "/home/sid/scans/DATA_2023-04-16_19-29-42/lidar/"
+    dir_path = "/home/sid/scans/DATA_2023-04-16_23-36-03/lidar"
 
     # Get list of all PLY files in directory
     ply_files = [os.path.join(dir_path, f) for f in os.listdir(dir_path) if f.endswith('.ply')]
