@@ -84,7 +84,7 @@ class PointCloudRegistrationModel:
 
 if __name__ == "__main__":
     # Example Usage:
-    checkpoint_path = "/home/sid/workspace/rss/pcrnet_pytorch/checkpoints/exp_ipcrnet/models/best_model_snap.t7"
+    checkpoint_path = "/home/sid/workspace/rss/DL-SLAM/checkpoints/best_model_snap.t7"
     target = "/home/sid/scans/Good/DATA_2023-04-17_17-27-07/lidar/88.ply"
     source = "/home/sid/scans/Good/DATA_2023-04-17_17-27-07/lidar/98.ply"
 
