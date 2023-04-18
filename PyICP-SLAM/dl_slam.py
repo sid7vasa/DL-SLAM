@@ -19,6 +19,10 @@ from utils.UtilsMisc import *
 import utils.UtilsPointcloud as Ptutils
 import utils.ICP as ICP
 import open3d as o3d
+from predict import PointCloudRegistrationModel
+
+checkpoint_path = "/home/sid/workspace/rss/DL-SLAM/checkpoints/best_model_snap.t7"
+dl_predict = PointCloudRegistrationModel(checkpoint_path)
 
 def load_ply_file(path):
     """
@@ -52,11 +56,11 @@ parser.add_argument('--try_gap_loop_detection', type=int, default=10) # same as 
 parser.add_argument('--loop_threshold', type=float, default=0.11) # 0.11 is usually safe (for avoiding false loop closure)
 parser.add_argument('--sequence_idx', type=str, default='00')
 parser.add_argument('--data_base_dir', type=str, 
-                    default='/home/sid/scans/DATA_2023-04-16_20-21-41/lidar/')
+                    default='/home/sid/scans/Good/DATA2/lidar/')
 
 parser.add_argument('--save_gap', type=int, default=300)
 
-parser.add_argument('--use_open3d', action='store_true')
+parser.add_argument('--use_open3d', action='store_true', default="True")
 
 args = parser.parse_args()
 
@@ -130,22 +134,24 @@ with writer.saving(fig, video_name, num_frames_to_save): # this video saving par
         
         prev_scan_down_pts = Ptutils.random_sampling(prev_scan_pts, num_points=args.num_icp_points)
 
-        if args.use_open3d: # calc odometry using custom ICP
+        if True: # calc odometry using custom ICP
             source = o3d.geometry.PointCloud()
-            source.points = o3d.utility.Vector3dVector(curr_scan_down_pts)
+            source.points = o3d.utility.Vector3dVector(curr_scan_pts)
 
             target = o3d.geometry.PointCloud()
-            target.points = o3d.utility.Vector3dVector(prev_scan_down_pts)
+            target.points = o3d.utility.Vector3dVector(prev_scan_pts)
 
-            reg_p2p = o3d.pipelines.registration.registration_icp(
-                                                                source = source, 
-                                                                target = target, 
-                                                                max_correspondence_distance = 15, 
-                                                                init = icp_initial, 
-                                                                estimation_method = o3d.pipelines.registration.TransformationEstimationPointToPoint(), criteria = o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=30)
-                                                                )
+            odom_transform = dl_predict.predict_transformation(source, target)
+
+            # reg_p2p = o3d.pipelines.registration.registration_icp(
+            #                                                     source = source, 
+            #                                                     target = target, 
+            #                                                     max_correspondence_distance = 15, 
+            #                                                     init = icp_initial, 
+            #                                                     estimation_method = o3d.pipelines.registration.TransformationEstimationPointToPoint(), criteria = o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=30)
+            #                                                     )
             
-            odom_transform = reg_p2p.transformation 
+            # odom_transform = reg_p2p.transformation 
         else:   # calc odometry using open3d
             odom_transform, _, _ = ICP.icp(curr_scan_down_pts, prev_scan_down_pts, init_pose=icp_initial, max_iterations=20)
 

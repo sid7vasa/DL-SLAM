@@ -20,6 +20,8 @@ class PointCloudRegistrationModel:
         # Load the state dictionaries
         model_snap = torch.load(model_path)
         self.model.load_state_dict(model_snap['model'])
+        print("[INFO] Loaded PCR model Successfully")
+ 
 
 
     def downsample(self, source, target, num_points):
