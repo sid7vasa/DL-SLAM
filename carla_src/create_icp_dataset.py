@@ -82,8 +82,9 @@ if __name__ == "__main__":
     consecutive_pairs['homogeneous_matrix'] = homogeneous_matrices
     
     # Add the parent folder and ".ply" suffix to the file names
-    consecutive_pairs["source"] = data_dir.split("/")[-1] + "/" + consecutive_pairs["source"].astype(str) + ".ply"
-    consecutive_pairs["target"] = data_dir.split("/")[-1] + "/" + consecutive_pairs["target"].astype(str) + ".ply"
+    print(consecutive_pairs["source"].astype(str))
+    consecutive_pairs["source"] = data_dir.split("/")[-1] + "/lidar/" + consecutive_pairs["source"].astype(int).astype(str) + ".ply"
+    consecutive_pairs["target"] = data_dir.split("/")[-1] + "/lidar/" + consecutive_pairs["target"].astype(int).astype(str) + ".ply"
 
 
     consecutive_pairs.to_csv(args.write_path, index=False)
