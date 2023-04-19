@@ -56,10 +56,17 @@ if __name__ == "__main__":
     parser.add_argument("data_dir", type=str, help="path to the data directory", nargs="?", default="/home/sid/scans/DATA_2023-04-16_23-36-03")
 
     # Add a command-line argument for the output file path
-    parser.add_argument("write_path", type=str, help="path to the output CSV file", nargs="?", default="consecutive_pairs.csv")
+    parser.add_argument("write_path", type=str, help="path to the output CSV file", nargs="?", default="transform_tables/consecutive_pairs")
 
 
     args = parser.parse_args()
+
+    time_stamp = args.data_dir.split("/")[-1]
+    if time_stamp == "":
+        time_stamp = args.data_dir.split("/")[-2]
+
+    print("TIME_STAMP:", time_stamp)
+    args.write_path = args.write_path + "_" + time_stamp + ".csv"
 
     # Define the path to the data directory
     data_dir = args.data_dir
@@ -82,8 +89,9 @@ if __name__ == "__main__":
     consecutive_pairs['homogeneous_matrix'] = homogeneous_matrices
     
     # Add the parent folder and ".ply" suffix to the file names
-    consecutive_pairs["source"] = data_dir.split("/")[-1] + "/" + consecutive_pairs["source"].astype(str) + ".ply"
-    consecutive_pairs["target"] = data_dir.split("/")[-1] + "/" + consecutive_pairs["target"].astype(str) + ".ply"
+    print(consecutive_pairs["source"].astype(str))
+    consecutive_pairs["source"] = data_dir.split("/")[-1] + "/lidar/" + consecutive_pairs["source"].astype(int).astype(str) + ".ply"
+    consecutive_pairs["target"] = data_dir.split("/")[-1] + "/lidar/" + consecutive_pairs["target"].astype(int).astype(str) + ".ply"
 
 
     consecutive_pairs.to_csv(args.write_path, index=False)
