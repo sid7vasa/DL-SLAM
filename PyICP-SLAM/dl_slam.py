@@ -21,7 +21,7 @@ import utils.ICP as ICP
 import open3d as o3d
 from predict import PointCloudRegistrationModel
 
-checkpoint_path = "/home/sid/workspace/rss/DL-SLAM/checkpoints/best_model_snap.t7"
+checkpoint_path = "/home/sid/workspace/rss/DL-SLAM/checkpoints/best_model_snap2.t7"
 dl_predict = PointCloudRegistrationModel(checkpoint_path)
 
 def load_ply_file(path):
@@ -56,7 +56,7 @@ parser.add_argument('--try_gap_loop_detection', type=int, default=10) # same as 
 parser.add_argument('--loop_threshold', type=float, default=0.11) # 0.11 is usually safe (for avoiding false loop closure)
 parser.add_argument('--sequence_idx', type=str, default='00')
 parser.add_argument('--data_base_dir', type=str, 
-                    default='/home/sid/scans/Good/DATA2/lidar/')
+                    default='/home/sid/scans/DATA2/lidar/')
 
 parser.add_argument('--save_gap', type=int, default=300)
 
